@@ -4,12 +4,16 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Create transporter for sending emails
+// Use explicit Gmail SMTP host/port to avoid service-based blocking on some hosts
 const transporter = nodemailer.createTransport({
-    service: 'gmail', // You can use other services like outlook, yahoo, etc.
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // STARTTLS
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD
-    }
+    },
+    connectionTimeout: 10000 // 10s to fail fast instead of hanging
 });
 
 // Function to send OTP email
