@@ -1,26 +1,16 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Create transporter for sending emails
-// Use explicit Gmail SMTP host/port; allow overrides via env
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: Number(process.env.SMTP_PORT || 465),
-    secure: process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : true, // true -> port 465
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-    },
-    connectionTimeout: 10000 // 10s to fail fast instead of hanging
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM = process.env.RESEND_FROM || 'Backbox OTP <onboarding@resend.dev>';
 
 // Function to send OTP email
 export const sendOTPEmail = async (email, otp) => {
     try {
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
+        const { data, error } = await resend.emails.send({
+            from: FROM,
             to: email,
             subject: 'Your OTP for Login - JWT & OTP Authentication',
             html: `
@@ -97,15 +87,19 @@ export const sendOTPEmail = async (email, otp) => {
                 </body>
                 </html>
             `
-        };
+        });
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log('Email sent successfully:', info.messageId);
-        return { success: true, messageId: info.messageId };
+        if (error) {
+            console.error('Error sending email via Resend:', error);
+            return { success: false, error: error.message };
+        }
+
+        console.log('Email sent successfully:', data?.id);
+        return { success: true, messageId: data?.id };
     } catch (error) {
         console.error('Error sending email:', error);
         return { success: false, error: error.message };
     }
 };
 
-export default transporter;
+export default resend;
